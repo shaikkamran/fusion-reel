@@ -1,0 +1,28 @@
+llm:
+  provider: gemini
+  model: gemini-2.0-flash
+  temperature: 0.0
+  top_p: 0.95
+
+indexer:
+  semantic:
+    index_path: movies_cosine.index
+    doc_map_path: id_map.pkl
+  bm25:
+    index_dir: whoosh_index
+
+parser:
+  strategy: llm
+
+fusion:
+  strategy: rrf
+  k: 60
+
+search:
+  bm25_limit: 20
+  faiss_k: 100
+  final_limit: 50
+
+embedding:
+  model: all-MiniLM-L6-v2
+
