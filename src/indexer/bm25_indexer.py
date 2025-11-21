@@ -254,8 +254,8 @@ if __name__ == "__main__":
     indexer = BM25Indexer()
     indexer.load(config['indexer']['bm25']['index_dir'])
     
-    query_text = "Indian movies from the combination of Shah rukh khan and karan johar"
-    filters = {'rating_min': 8, 'rating_max': 10, "genre":"romance"}
+    query_text = "Indian romance karan johar"
+    filters = {"year_min":2000,"year_max":2025, "genre":"romance"}
     results = indexer.search(query_text, filters=filters, limit=20, enable_fuzzy=False)
     
     print(f"Found {len(results)} results")

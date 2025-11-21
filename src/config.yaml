@@ -1,9 +1,16 @@
+# Search engine strategy: bm25_only, semantic_only, llm_bm25, llm_semantic, llm_bm25_semantic
+search_engine:
+  strategy: semantic_only
+
+# LLM configuration
 llm:
+  enable_parser: true
   provider: gemini
   model: gemini-2.0-flash
   temperature: 0.0
   top_p: 0.95
 
+# Indexer paths
 indexer:
   semantic:
     index_path: movies_cosine.index
@@ -11,18 +18,29 @@ indexer:
   bm25:
     index_dir: whoosh_index
 
+# Query parser strategy
 parser:
   strategy: llm
 
+# BM25 search options
+bm25:
+  enable_fuzzy: true
+  enable_filters: false
+
+# Fusion configuration
 fusion:
   strategy: rrf
   k: 60
+  semantic_weight: 1.5
+  bm25_weight: 1.0
 
+# Search limits
 search:
   bm25_limit: 20
   faiss_k: 100
   final_limit: 50
 
+# Embedding model
 embedding:
   model: all-MiniLM-L6-v2
 
