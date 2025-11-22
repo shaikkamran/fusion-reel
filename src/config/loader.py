@@ -35,6 +35,7 @@ def load_config(config_path=None):
         config['bm25'] = {}
     config['bm25'].setdefault('enable_fuzzy', True)
     config['bm25'].setdefault('enable_filters', True)
+    config['bm25'].setdefault('require_all_terms', False)  # Default: OR between terms
     
     # Set defaults for semantic section
     if 'semantic' not in config:

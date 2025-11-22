@@ -89,12 +89,9 @@ def format_search_results(
             
             if 'characters' in doc and doc['characters']:
                 characters = doc['characters']
+                # Show all characters without truncation
                 if isinstance(characters, str):
-                    char_list = characters.split(',')[:3]
-                    chars_display = ', '.join(char_list)
-                    if len(characters.split(',')) > 3:
-                        chars_display += f" ... (+{len(characters.split(',')) - 3} more)"
-                    content_lines.append(f"[dim]Characters:[/dim] {chars_display}")
+                    content_lines.append(f"[dim]Characters:[/dim] {characters}")
                 else:
                     content_lines.append(f"[dim]Characters:[/dim] {characters}")
             
