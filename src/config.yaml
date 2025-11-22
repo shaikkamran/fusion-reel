@@ -26,7 +26,8 @@ parser:
 # BM25 search options
 bm25:
   enable_fuzzy: true
-  enable_filters: false
+  enable_filters: True
+  require_all_terms: false  # If true, all query terms must match (AND); if false, any term can match (OR)
 
 # Semantic search options
 semantic:
@@ -36,8 +37,8 @@ semantic:
 fusion:
   strategy: rrf
   k: 60
-  semantic_weight: 0.75
-  bm25_weight: 1.0
+  semantic_weight: 1
+  bm25_weight: 1.25
 
 # Search limits
 search:

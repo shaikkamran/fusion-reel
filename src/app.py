@@ -138,6 +138,10 @@ def main():
                         if result.get('genres'):
                             details.append(f"[bold green]Genres:[/bold green] {result.get('genres')}")
                         
+                        if result.get('characters'):
+                            # Show all characters without truncation
+                            details.append(f"[dim]Characters:[/dim] {result.get('characters')}")
+                        
                         content = "\n".join(details)
                         panel_title = f"[{idx}] {title} ({year})"
                         console.print(Panel(content, title=panel_title, border_style="blue"))
