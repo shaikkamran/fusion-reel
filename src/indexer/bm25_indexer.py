@@ -64,7 +64,7 @@ class BM25Indexer:
         Search with BM25 on individual fields, optional fuzzy matching, and hard filters.
         
         Args:
-            query_text: Search query string
+            query_text: Pre-cleaned search query string (stop words removed, filters extracted)
             filters: Dict with filters (year_min, year_max, genre, director, rating_min, rating_max)
             limit: Maximum number of results
             enable_fuzzy: Whether to enable fuzzy matching on actors/characters/director
@@ -72,7 +72,8 @@ class BM25Indexer:
         Returns:
             Dict mapping document IDs to BM25 scores
         """
-        cleaned_query = self._clean_query(query_text)
+        # Query text is expected to be pre-cleaned before calling this method
+        cleaned_query = query_text.strip()
         
         with self.whoosh_index.searcher() as searcher:
             filter_query = self._build_filters(filters)
@@ -90,11 +91,7 @@ class BM25Indexer:
         with self.whoosh_index.searcher() as s:
             return s.document(id=doc_id)
     
-    def _clean_query(self, query_text):
-        """Tokenize query and remove stop words."""
-        analyzer = StandardAnalyzer()
-        tokens = [token.text for token in analyzer(query_text)]
-        return " ".join(tokens)
+
     
     def _build_filters(self, filters):
         """Build Whoosh filter query from filters dict."""
@@ -113,11 +110,6 @@ class BM25Indexer:
         if filters.get('genre'):
             genre_value = str(filters['genre']).lower().strip()
             filter_queries.append(wquery.Term("genres", genre_value))
-        
-        # Director filter
-        if filters.get('director'):
-            director_value = str(filters['director']).lower().strip()
-            filter_queries.append(wquery.Term("director", director_value))
         
         # Rating filter
         if filters.get('rating_min') is not None:

@@ -1,10 +1,10 @@
-# Search engine strategy: bm25_only, semantic_only, llm_bm25, llm_semantic, llm_bm25_semantic
+# Search engine strategy: bm25, semantic, fusion
 search_engine:
-  strategy: semantic_only
+  strategy: fusion
 
 # LLM configuration
 llm:
-  enable_parser: true
+  enable_parser: false
   provider: gemini
   model: gemini-2.0-flash
   temperature: 0.0
@@ -20,18 +20,23 @@ indexer:
 
 # Query parser strategy
 parser:
-  strategy: llm
+  bm25_strategy: regex  # 'regex' or 'llm' - for BM25 query parsing and filter extraction
+  semantic_strategy: regex  # 'regex' or 'llm' - for semantic filter extraction only
 
 # BM25 search options
 bm25:
   enable_fuzzy: true
   enable_filters: false
 
+# Semantic search options
+semantic:
+  apply_filters: true  # Post-filtering on semantic results
+
 # Fusion configuration
 fusion:
   strategy: rrf
   k: 60
-  semantic_weight: 1.5
+  semantic_weight: 0.75
   bm25_weight: 1.0
 
 # Search limits
@@ -42,5 +47,5 @@ search:
 
 # Embedding model
 embedding:
-  model: all-MiniLM-L6-v2
-
+  # model: nomic-ai/nomic-embed-text-v1  # Lightweight nomic embeddings 
+  model : all-MiniLM-L6-v2

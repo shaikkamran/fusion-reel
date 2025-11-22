@@ -16,19 +16,30 @@ def load_config(config_path=None):
     # Set defaults for search_engine section
     if 'search_engine' not in config:
         config['search_engine'] = {}
-    config['search_engine'].setdefault('strategy', 'llm_bm25_semantic')
+    config['search_engine'].setdefault('strategy', 'fusion')
     
     # Validate search_engine strategy
-    valid_strategies = ['bm25_only', 'semantic_only', 'llm_bm25', 'llm_semantic', 'llm_bm25_semantic']
+    valid_strategies = ['bm25', 'semantic', 'fusion']
     if config['search_engine']['strategy'] not in valid_strategies:
         raise ValueError(f"Invalid search_engine.strategy: {config['search_engine']['strategy']}. "
                         f"Must be one of: {valid_strategies}")
+    
+    # Set defaults for parser section
+    if 'parser' not in config:
+        config['parser'] = {}
+    config['parser'].setdefault('bm25_strategy', 'regex')
+    config['parser'].setdefault('semantic_strategy', 'regex')
     
     # Set defaults for bm25 section
     if 'bm25' not in config:
         config['bm25'] = {}
     config['bm25'].setdefault('enable_fuzzy', True)
     config['bm25'].setdefault('enable_filters', True)
+    
+    # Set defaults for semantic section
+    if 'semantic' not in config:
+        config['semantic'] = {}
+    config['semantic'].setdefault('apply_filters', True)
     
     # Set defaults for llm section
     if 'llm' not in config:

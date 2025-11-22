@@ -13,18 +13,40 @@ class SemanticIndexer:
         If cols_to_combine is None, defaults to ['title', 'overview', 'genres', 'director']
         """
         if cols_to_combine is None:
-            cols_to_combine = ['title', 'overview', 'genres', 'director', 'actors','characters']
+            cols_to_combine = {'title':"Title", 'overview':"Overview", 'genres':"Genres", 'director':"Director", 'actors':"Cast", 'characters':"Character Names"}
         
         # Fill NaN values with empty strings
         dataframe = dataframe.fillna('')
+
+        # title = f"Title: {row['title']}"
+        
+        # # B. Important Metadata (Limit to top items to prevent noise)
+        # # We limit actors to top 5 to avoid 'Vector Dilution'
+        # actors = f"Cast: {','.join(row['actors'].split(',')[:5])}" if row['actors'] else ""
+        # director = f"Director: {row['director']}" if row['director'] else ""
+        
+        # # C. The 'Vibe' Check (Genres + Tags)
+        # # Tags often contain geographic info or sub-genres
+        # genres = f"Genre: {row['genres']}" if row['genres'] else ""
+        # tags = f"Keywords: {row['tags']}" if row['tags'] else ""
         
         # Create combined_text for each row
+        
         def combine_row(row):
             parts = []
             for col in cols_to_combine:
                 if col in dataframe.columns and row[col]:
-                    parts.append(f"{col.capitalize()}: {row[col]}")
-            return "\n".join(parts)
+
+                    if col in ['genres','actors','characters']:
+                        items = row[col].split(',')
+
+                        parts.append(f"{cols_to_combine[col]}: {','.join(items)}")
+                    
+                    else:
+                        parts.append(f"{cols_to_combine[col]}: {row[col]}")
+            
+            return " ".join(parts)
+
         
         dataframe['combined_text'] = dataframe.apply(combine_row, axis=1)
         return dataframe
@@ -54,7 +76,30 @@ class SemanticIndexer:
                 "rating": float(row['rating']) if str(row['rating']).replace('.','').isdigit() else 0.0
             }
         
-        embeddings = embedder.encode(vectors, show_progress_bar=True)
+        # Use batch encoding with single-threaded processing to avoid multiprocessing hangs on macOS
+        # Process in smaller batches to avoid memory issues and multiprocessing
+        print(f"Encoding {len(vectors)} texts...")
+        try:
+            embeddings = embedder.encode(
+                vectors, 
+                show_progress_bar=True, 
+                batch_size=16,  # Smaller batch size
+                convert_to_numpy=True,
+                normalize_embeddings=False  # We'll normalize with FAISS
+            )
+            print("Encoding complete!")
+        except Exception as e:
+            print(f"Batch encoding failed: {e}")
+            print("Falling back to single-item encoding (slower but more reliable)...")
+            import numpy as np
+            embeddings_list = []
+            for i, text in enumerate(vectors):
+                if i % 100 == 0:
+                    print(f"Progress: {i}/{len(vectors)}")
+                emb = embedder.encode([text], convert_to_numpy=True)
+                embeddings_list.append(emb[0])
+            embeddings = np.array(embeddings_list)
+            print("Encoding complete!")
         dimension = embeddings.shape[1]
         self.faiss_index = faiss.IndexFlatIP(dimension)
         faiss.normalize_L2(embeddings)
@@ -63,7 +108,7 @@ class SemanticIndexer:
     
     def search(self, query_text, embedder, filters=None, k=100):
         """Search with post-filtering"""
-        vec = embedder.encode([query_text])
+        vec = embedder.encode([query_text], convert_to_numpy=True)
         faiss.normalize_L2(vec)
         D, I = self.faiss_index.search(vec, k=k)
         
@@ -103,6 +148,22 @@ if __name__ == "__main__":
     import pandas as pd
     import sys
     import os
+    import warnings
+    import multiprocessing
+    
+    # Disable multiprocessing completely to avoid hangs on macOS
+    os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+    os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['MKL_NUM_THREADS'] = '1'
+    
+    # Force single-threaded multiprocessing
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass  # Already set
+    
+    # Suppress multiprocessing semaphore warnings (harmless but noisy)
+    warnings.filterwarnings('ignore', category=UserWarning, module='multiprocessing.resource_tracker')
     
     # Add parent directory to path for imports
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -122,15 +183,30 @@ if __name__ == "__main__":
     # print(df.head())
 
     config = load_config()
-    embedder = SentenceTransformer(config['embedding']['model'])
+    print(f"Embedding Model :{config['embedding']['model']}")
+    print("Loading model (this may take a moment)...")
+    embedder = SentenceTransformer(
+        config['embedding']['model'], 
+        trust_remote_code=True,
+        device='cpu'  # Explicitly use CPU
+    )
+    print("Model loaded successfully!")
+    
+    # Test encoding a single text first
+    print("Testing encoding with a single text...")
+    test_embedding = embedder.encode(["test text"], convert_to_numpy=True)
+    print(f"Test encoding successful! Shape: {test_embedding.shape}")
     
     indexer = SemanticIndexer()
 
-    # indexer.index(df, embedder,cols_to_combine=["title", "overview", "genres"])
-    # indexer.save(config['indexer']['semantic']['index_path'], config['indexer']['semantic']['doc_map_path'])
+    print("Starting indexing...")
+    indexer.index(df, embedder)
+    print("Indexing complete! Saving index...")
+    indexer.save(config['indexer']['semantic']['index_path'], config['indexer']['semantic']['doc_map_path'])
+    print("Index saved! Loading to verify...")
     indexer.load(config['indexer']['semantic']['index_path'], config['indexer']['semantic']['doc_map_path'])
     
-    query_text = "Best Movies starring a Muslim character, about 9/11"
+    query_text = "Best Movies from Shah Rukh Khan"
     index_dict = indexer.search(query_text, embedder, filters=None, k=100)
     count = 0
     cols_to_display = ["title", "overview", "genres", "year", "rating", "director","actors","characters"]
